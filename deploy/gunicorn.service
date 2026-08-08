@@ -8,7 +8,7 @@ Group=www-data
 WorkingDirectory=/var/www/vhosts/elanbrands.net/lipasalama.co.tz
 ExecStart=/var/www/vhosts/elanbrands.net/lipasalama.co.tz/venv/bin/gunicorn \
     --workers 3 \
-    --bind unix:/var/www/vhosts/elanbrands.net/lipasalama.co.tz/run/gunicorn.sock \
+    --bind 127.0.0.1:8001 \
     --access-logfile - \
     --error-logfile - \
     backend.wsgi:application
