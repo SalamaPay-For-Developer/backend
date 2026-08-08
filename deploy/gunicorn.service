@@ -1,0 +1,19 @@
+[Unit]
+Description=Gunicorn daemon for SalamaPay Django API
+After=network.target
+
+[Service]
+User=root
+Group=www-data
+WorkingDirectory=/var/www/salamapay
+ExecStart=/var/www/salamapay/venv/bin/gunicorn \
+    --workers 3 \
+    --bind unix:/var/www/salamapay/run/gunicorn.sock \
+    --access-logfile - \
+    --error-logfile - \
+    backend.wsgi:application
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

@@ -10,3 +10,5 @@ httpx
 drf-spectacular
 django-filter
 python-dateutil
+gunicorn>=21.0
+whitenoise>=6.0
