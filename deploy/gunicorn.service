@@ -5,10 +5,10 @@ After=network.target
 [Service]
 User=root
 Group=www-data
-WorkingDirectory=/var/www/salamapay
-ExecStart=/var/www/salamapay/venv/bin/gunicorn \
+WorkingDirectory=/var/www/vhosts/elanbrands.net/lipasalama.co.tz
+ExecStart=/var/www/vhosts/elanbrands.net/lipasalama.co.tz/venv/bin/gunicorn \
     --workers 3 \
-    --bind unix:/var/www/salamapay/run/gunicorn.sock \
+    --bind unix:/var/www/vhosts/elanbrands.net/lipasalama.co.tz/run/gunicorn.sock \
     --access-logfile - \
     --error-logfile - \
     backend.wsgi:application

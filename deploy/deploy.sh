@@ -1,11 +1,11 @@
 #!/bin/bash
 set -e
 
-PROJECT_DIR="/var/www/salamapay"
+PROJECT_DIR="/var/www/vhosts/elanbrands.net/lipasalama.co.tz"
 VENV_DIR="$PROJECT_DIR/venv"
 
 echo "=== SalamaPay Production Deployment (Plesk-compatible) ==="
-echo "Domain: api.lipasalama.co.tz"
+echo "Domain: lipasalama.co.tz"
 echo "Project: $PROJECT_DIR"
 echo ""
 
@@ -58,15 +58,15 @@ echo ""
 echo "IMPORTANT: Nginx haifanywi hapa - Plesk inaendelea nayo!"
 echo ""
 echo "Endelea na hatua hizi kwenye Plesk Panel:"
-echo "  1. Nenda Domains > api.lipasalama.co.tz"
+echo "  1. Nenda Domains > lipasalama.co.tz"
 echo "  2. Bonyeza 'Apache & nginx Settings'"
 echo "  3. Nakili maudhui ya deploy/nginx-plesk-directives.conf"
 echo "  4. Paste kwenye 'Additional nginx directives'"
 echo "  5. Bonyeza 'Apply'"
 echo ""
-echo "API:      https://api.lipasalama.co.tz/api/v1/"
-echo "Admin:    https://api.lipasalama.co.tz/admin/"
-echo "Swagger:  https://api.lipasalama.co.tz/api/docs/"
+echo "API:      https://lipasalama.co.tz/api/v1/"
+echo "Admin:    https://lipasalama.co.tz/admin/"
+echo "Swagger:  https://lipasalama.co.tz/api/docs/"
 echo ""
 echo "Check status:"
 echo "  systemctl status gunicorn"

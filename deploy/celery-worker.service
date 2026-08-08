@@ -5,8 +5,8 @@ After=network.target redis-server.service
 [Service]
 User=root
 Group=www-data
-WorkingDirectory=/var/www/salamapay
-ExecStart=/var/www/salamapay/venv/bin/celery -A backend worker -l info
+WorkingDirectory=/var/www/vhosts/elanbrands.net/lipasalama.co.tz
+ExecStart=/var/www/vhosts/elanbrands.net/lipasalama.co.tz/venv/bin/celery -A backend worker -l info
 Restart=on-failure
 RestartSec=5s
 
