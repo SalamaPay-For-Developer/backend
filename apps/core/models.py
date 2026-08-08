@@ -8,3 +8,18 @@ class BaseModel(models.Model):
 
     class Meta:
         abstract = True
+
+
+class SMSLog(BaseModel):
+    class Status(models.TextChoices):
+        PENDING = 'PENDING', 'Pending'
+        SENT = 'SENT', 'Sent'
+        FAILED = 'FAILED', 'Failed'
+
+    phone = models.CharField(max_length=20)
+    message = models.TextField()
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+    response = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return f"SMS to {self.phone} - {self.status}"

@@ -1,13 +1,154 @@
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from django.utils import timezone
 from django.db import models
+from django.contrib.auth import authenticate
+import random
 from .models import User, Business, BusinessMember, BusinessKYC, KYCDocument
 from .serializers import (
     UserSerializer, BusinessSerializer, BusinessMemberSerializer,
     BusinessKYCSerializer, KYCDocumentSerializer
 )
+from apps.core.sms_service import send_otp_sms, send_password_reset_sms
+from apps.core.email_service import send_welcome_email, send_otp_email, send_password_reset_email
+
+
+def generate_otp_code():
+    return str(random.randint(100000, 999999))
+
+
+class OTPVerifyView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        phone_number = request.data.get('phone_number')
+        otp_code = request.data.get('otp_code')
+
+        if not phone_number or not otp_code:
+            return Response(
+                {"detail": "Phone number and OTP code are required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            user = User.objects.get(phone_number=phone_number)
+        except User.DoesNotExist:
+            return Response(
+                {"detail": "User not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        if user.otp_verified:
+            return Response(
+                {"detail": "Account is already verified."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        user.otp_verified = True
+        user.is_verified = True
+        user.save(update_fields=['otp_verified', 'is_verified'])
+
+        return Response({
+            "detail": "Account verified successfully.",
+            "phone_number": user.phone_number,
+            "verified": True
+        })
+
+
+class PasswordResetRequestView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        phone_number = request.data.get('phone_number')
+
+        if not phone_number:
+            return Response(
+                {"detail": "Phone number is required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            user = User.objects.get(phone_number=phone_number)
+            send_password_reset_sms(phone_number)
+        except User.DoesNotExist:
+            pass
+
+        return Response({
+            "detail": "If this phone number exists, a reset code has been sent.",
+            "phone_number": phone_number
+        })
+
+
+class PasswordResetConfirmView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        phone_number = request.data.get('phone_number')
+        new_password = request.data.get('new_password')
+
+        if not phone_number or not new_password:
+            return Response(
+                {"detail": "Phone number and new password are required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if len(new_password) < 6:
+            return Response(
+                {"detail": "Password must be at least 6 characters."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            user = User.objects.get(phone_number=phone_number)
+        except User.DoesNotExist:
+            return Response(
+                {"detail": "User not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        user.set_password(new_password)
+        user.save(update_fields=['password'])
+        return Response({"detail": "Password reset successfully."})
+
+
+class ResendOTPView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        phone_number = request.data.get('phone_number')
+
+        if not phone_number:
+            return Response(
+                {"detail": "Phone number is required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            user = User.objects.get(phone_number=phone_number)
+        except User.DoesNotExist:
+            return Response(
+                {"detail": "User not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        if user.otp_verified:
+            return Response(
+                {"detail": "Account is already verified."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        otp_code = generate_otp_code()
+        success, _ = send_otp_sms(phone_number, otp_code)
+
+        if success:
+            return Response({"detail": "OTP code sent successfully."})
+        else:
+            return Response(
+                {"detail": "Failed to send OTP. Please try again."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -19,6 +160,20 @@ class UserViewSet(viewsets.ModelViewSet):
         if self.action == 'create':
             return [permissions.AllowAny()]
         return super().get_permissions()
+
+    def create(self, request, *args, **kwargs):
+        response = super().create(request, *args, **kwargs)
+        if response.status_code == status.HTTP_201_CREATED:
+            phone_number = response.data.get('phone_number')
+            full_name = response.data.get('full_name', '')
+            email = response.data.get('email')
+            if phone_number:
+                otp_code = generate_otp_code()
+                send_otp_sms(phone_number, otp_code)
+                if email:
+                    send_welcome_email(email, full_name, phone_number)
+                    send_otp_email(email, otp_code, full_name)
+        return response
 
     @action(detail=False, methods=['get'])
     def me(self, request):
