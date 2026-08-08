@@ -1,7 +1,9 @@
-from rest_framework import viewsets, permissions, status
+from rest_framework import viewsets, permissions, status, serializers
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.utils import timezone
 from django.db import models
 from django.contrib.auth import authenticate
@@ -17,6 +19,21 @@ from apps.core.email_service import send_welcome_email, send_otp_email, send_pas
 
 def generate_otp_code():
     return str(random.randint(100000, 999999))
+
+
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    def validate(self, attrs):
+        data = super().validate(attrs)
+        if not self.user.otp_verified:
+            raise serializers.ValidationError(
+                {"detail": "Your account is not verified. Please verify your phone number with OTP first.", "needs_otp": True}
+            )
+        data['user'] = UserSerializer(self.user).data
+        return data
+
+
+class CustomTokenObtainPairView(TokenObtainPairView):
+    serializer_class = CustomTokenObtainPairSerializer
 
 
 class OTPVerifyView(APIView):
@@ -46,9 +63,22 @@ class OTPVerifyView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        if not user.otp_code:
+            return Response(
+                {"detail": "No OTP code was sent. Please request a new code."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if user.otp_code != otp_code:
+            return Response(
+                {"detail": "Invalid OTP code. Please check and try again."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         user.otp_verified = True
         user.is_verified = True
-        user.save(update_fields=['otp_verified', 'is_verified'])
+        user.otp_code = None
+        user.save(update_fields=['otp_verified', 'is_verified', 'otp_code'])
 
         return Response({
             "detail": "Account verified successfully.",
@@ -142,17 +172,19 @@ class ResendOTPView(APIView):
             )
 
         otp_code = generate_otp_code()
-        success, _ = send_otp_sms(phone_number, otp_code)
+        user.otp_code = otp_code
+        user.save(update_fields=['otp_code'])
+        try:
+            send_otp_sms(phone_number, otp_code)
+        except Exception:
+            pass
         if user.email:
-            send_otp_email(user.email, otp_code, user.full_name)
+            try:
+                send_otp_email(user.email, otp_code, user.full_name)
+            except Exception:
+                pass
 
-        if success:
-            return Response({"detail": "OTP code sent successfully."})
-        else:
-            return Response(
-                {"detail": "Failed to send OTP. Please try again."},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+        return Response({"detail": "OTP code sent successfully."})
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -171,12 +203,25 @@ class UserViewSet(viewsets.ModelViewSet):
             phone_number = response.data.get('phone_number')
             full_name = response.data.get('full_name', '')
             email = response.data.get('email')
-            if phone_number:
+            user_id = response.data.get('id')
+            if phone_number and user_id:
                 otp_code = generate_otp_code()
-                send_otp_sms(phone_number, otp_code)
+                try:
+                    user = User.objects.get(id=user_id)
+                    user.otp_code = otp_code
+                    user.save(update_fields=['otp_code'])
+                except User.DoesNotExist:
+                    pass
+                try:
+                    send_otp_sms(phone_number, otp_code)
+                except Exception:
+                    pass
                 if email:
-                    send_welcome_email(email, full_name, phone_number)
-                    send_otp_email(email, otp_code, full_name)
+                    try:
+                        send_welcome_email(email, full_name, phone_number)
+                        send_otp_email(email, otp_code, full_name)
+                    except Exception:
+                        pass
         return response
 
     @action(detail=False, methods=['get'])

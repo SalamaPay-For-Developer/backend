@@ -31,6 +31,7 @@ class User(AbstractUser, BaseModel):
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.CUSTOMER)
     is_verified = models.BooleanField(default=False)
     otp_verified = models.BooleanField(default=False)
+    otp_code = models.CharField(max_length=6, blank=True, null=True)
 
     objects = UserManager()
 

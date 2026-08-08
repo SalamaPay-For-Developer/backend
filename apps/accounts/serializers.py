@@ -12,6 +12,16 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ('id', 'phone_number', 'full_name', 'email', 'role', 'is_verified', 'otp_verified', 'password')
         read_only_fields = ('id', 'is_verified', 'otp_verified', 'role')
 
+    def validate_phone_number(self, value):
+        if User.objects.filter(phone_number=value).exists():
+            raise serializers.ValidationError("A user with this phone number already exists. Please login or use a different number.")
+        return value
+
+    def validate_email(self, value):
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("A user with this email already exists. Please login or use a different email.")
+        return value
+
     def create(self, validated_data):
         user = User.objects.create_user(**validated_data)
         Wallet.objects.create(owner=user, wallet_type=Wallet.WalletType.PERSONAL)
