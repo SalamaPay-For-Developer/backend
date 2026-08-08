@@ -225,11 +225,12 @@ SMS_BASE_URL = env('SMS_BASE_URL', default='https://messaging-service.co.tz/api/
 
 # Email Settings
 EMAIL_BACKEND = env('EMAIL_BACKEND', default='django.core.mail.backends.smtp.EmailBackend')
-EMAIL_HOST = env('EMAIL_HOST', default='smtp.gmail.com')
-EMAIL_PORT = env.int('EMAIL_PORT', default=587)
-EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS', default=True)
-EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='')
+EMAIL_HOST = env('EMAIL_HOST', default='lipasalama.co.tz')
+EMAIL_PORT = env.int('EMAIL_PORT', default=465)
+EMAIL_USE_SSL = env.bool('EMAIL_USE_SSL', default=True)
+EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS', default=False)
+EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='info@lipasalama.co.tz')
 EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')
-DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='SalamaPay <noreply@lipasalama.co.tz>')
+DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='SalamaPay <info@lipasalama.co.tz>')
 ADMIN_EMAIL = env('ADMIN_EMAIL', default='info@lipasalama.co.tz')
 

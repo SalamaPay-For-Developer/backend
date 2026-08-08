@@ -72,6 +72,8 @@ class PasswordResetRequestView(APIView):
         try:
             user = User.objects.get(phone_number=phone_number)
             send_password_reset_sms(phone_number)
+            if user.email:
+                send_password_reset_email(user.email, user.full_name)
         except User.DoesNotExist:
             pass
 
@@ -141,6 +143,8 @@ class ResendOTPView(APIView):
 
         otp_code = generate_otp_code()
         success, _ = send_otp_sms(phone_number, otp_code)
+        if user.email:
+            send_otp_email(user.email, otp_code, user.full_name)
 
         if success:
             return Response({"detail": "OTP code sent successfully."})
