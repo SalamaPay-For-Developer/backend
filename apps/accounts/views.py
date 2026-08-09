@@ -360,3 +360,38 @@ class BusinessMemberViewSet(viewsets.ModelViewSet):
             return BusinessMember.objects.all()
         member_business_ids = BusinessMember.objects.filter(user=user, is_active=True).values_list('business_id', flat=True)
         return BusinessMember.objects.filter(business_id__in=member_business_ids)
+
+
+class NameLookupView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        phone_number = request.data.get('phone_number')
+        if not phone_number:
+            return Response(
+                {"detail": "Phone number is required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        normalized = phone_number.strip()
+        if normalized.startswith('0'):
+            normalized = '+255' + normalized[1:]
+        elif normalized.startswith('255'):
+            normalized = '+' + normalized
+        elif not normalized.startswith('+'):
+            normalized = '+' + normalized
+
+        try:
+            user = User.objects.get(phone_number=normalized)
+            return Response({
+                "found": True,
+                "full_name": user.full_name,
+                "phone_number": user.phone_number,
+                "is_verified": user.is_verified,
+            })
+        except User.DoesNotExist:
+            return Response({
+                "found": False,
+                "full_name": None,
+                "phone_number": normalized,
+            }, status=status.HTTP_200_OK)
