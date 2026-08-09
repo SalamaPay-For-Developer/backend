@@ -32,6 +32,7 @@ urlpatterns = [
         path('webhooks/', include('apps.webhooks.urls')),
         path('compliance/', include('apps.compliance.urls')),
         path('modules/', include('apps.business_modules.urls')),
+        path('imt/', include('apps.selcom.urls')),
     ])),
 
     # Documentation

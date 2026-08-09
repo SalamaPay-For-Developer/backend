@@ -11,6 +11,7 @@ from .serializers import (
     CollectionInitiateSerializer
 )
 from apps.selcom.client import SelcomClient
+from apps.core.sms_service import send_transaction_sms
 from asgiref.sync import async_to_sync
 
 class PaymentCategoryViewSet(viewsets.ReadOnlyModelViewSet):
@@ -92,3 +93,30 @@ class TransactionViewSet(viewsets.ModelViewSet):
             return Response(status_response)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['get'])
+    def receipt(self, request, reference=None):
+        """Get receipt data for a transaction."""
+        transaction = self.get_object()
+        data = TransactionSerializer(transaction).data
+        data['date_formatted'] = transaction.completed_at.strftime('%d/%m/%Y %H:%M') if transaction.completed_at else transaction.created_at.strftime('%d/%m/%Y %H:%M')
+        data['amount_formatted'] = f"{transaction.amount:,.0f} {transaction.currency}"
+        data['type_label'] = dict(Transaction.Type.choices).get(transaction.type, transaction.type)
+        data['status_label'] = dict(Transaction.Status.choices).get(transaction.status, transaction.status)
+        data['channel_label'] = dict(Transaction.Channel.choices).get(transaction.channel, transaction.channel)
+        return Response(data)
+
+    @action(detail=False, methods=['get'])
+    def summary(self, request):
+        """Get transaction summary (income/expense totals)."""
+        queryset = self.get_queryset()
+        income = queryset.filter(type=Transaction.Type.COLLECTION, status=Transaction.Status.SUCCESS).aggregate(
+            total=models.Sum('amount'))['total'] or 0
+        expense = queryset.filter(type=Transaction.Type.PAYOUT, status=Transaction.Status.SUCCESS).aggregate(
+            total=models.Sum('amount'))['total'] or 0
+        count = queryset.count()
+        return Response({
+            'total_income': str(income),
+            'total_expense': str(expense),
+            'total_transactions': count,
+        })

@@ -177,3 +177,23 @@ def send_welcome_sms(phone, full_name):
     """
     message = f"SalamaPay: Karibu {full_name}! Your account has been created. Verify your phone to get started."
     return sms_service.send_sms(phone, message)
+
+
+def send_transaction_sms(phone, reference, amount, tx_type, recipient=None, channel="Selcom"):
+    """
+    Send transaction confirmation SMS.
+    tx_type: 'SENT', 'RECEIVED', 'UTILITY', 'DEPOSIT', 'WITHDRAW'
+    """
+    if tx_type == 'SENT':
+        message = f"SalamaPay: Umetuma TSh {amount} kwa {recipient or 'mpokeaji'}. Ref: {reference}."
+    elif tx_type == 'RECEIVED':
+        message = f"SalamaPay: Umepokea TSh {amount} kutoka {recipient or 'mtumaji'}. Ref: {reference}."
+    elif tx_type == 'UTILITY':
+        message = f"SalamaPay: Umelipa TSh {amount} kwa huduma. Ref: {reference}."
+    elif tx_type == 'DEPOSIT':
+        message = f"SalamaPay: Umedepositi TSh {amount} kwenye akiba yako. Ref: {reference}."
+    elif tx_type == 'WITHDRAW':
+        message = f"SalamaPay: Umeondoa TSh {amount} kutoka akiba yako. Ref: {reference}."
+    else:
+        message = f"SalamaPay: Muamala wa TSh {amount} umekamilika. Ref: {reference}."
+    return sms_service.send_sms(phone, message)

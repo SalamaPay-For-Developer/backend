@@ -2,6 +2,7 @@ from django.db import models
 from apps.core.models import BaseModel
 from django.conf import settings
 from decimal import Decimal
+from .savings_models import SavingsGoal, SavingsContribution  # noqa
 
 
 class Wallet(BaseModel):
