@@ -33,6 +33,8 @@ urlpatterns = [
         path('compliance/', include('apps.compliance.urls')),
         path('modules/', include('apps.business_modules.urls')),
         path('imt/', include('apps.selcom.urls')),
+        path('developer/', include('apps.developer.urls')),
+        path('admin-panel/', include('apps.organization.urls')),
     ])),
 
     # Documentation

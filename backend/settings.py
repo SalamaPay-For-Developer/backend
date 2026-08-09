@@ -61,6 +61,8 @@ INSTALLED_APPS = [
     'apps.webhooks',
     'apps.compliance',
     'apps.business_modules',
+    'apps.developer',
+    'apps.organization',
 ]
 
 MIDDLEWARE = [
