@@ -10,6 +10,7 @@ from .views import (
     CheckoutSessionViewSet,
     ApiLogViewSet,
     ServiceCapabilityViewSet,
+    public_checkout_view,
 )
 
 router = DefaultRouter()
@@ -25,5 +26,6 @@ urlpatterns = [
     path('connect-selcom/', ConnectSelcomView.as_view(), name='connect-selcom'),
     path('selcom/', SelcomConnectionView.as_view(), name='selcom-connection'),
     path('selcom/test/', SelcomConnectionView.test, name='selcom-test'),
+    path('checkout/<str:code>/', public_checkout_view, name='public-checkout'),
     path('', include(router.urls)),
 ]

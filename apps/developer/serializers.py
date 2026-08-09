@@ -93,25 +93,32 @@ class WebhookDeliverySerializer(serializers.ModelSerializer):
 
 
 class CheckoutSessionSerializer(serializers.ModelSerializer):
+    reference = serializers.CharField(source='order_id', read_only=True)
     checkout_url = serializers.SerializerMethodField()
+    payment_link_url = serializers.SerializerMethodField()
 
     class Meta:
         model = CheckoutSession
         fields = [
-            'id', 'order_id', 'amount', 'currency', 'description',
+            'id', 'reference', 'order_id', 'short_code', 'amount', 'currency', 'description',
             'customer_name', 'customer_phone', 'customer_email',
-            'payment_methods', 'success_url', 'cancel_url',
-            'status', 'paid_at', 'checkout_url', 'appearance_config',
-            'created_at', 'updated_at',
+            'payment_methods', 'allowed_methods', 'allow_custom_amount',
+            'min_amount', 'max_amount', 'profile_id',
+            'success_url', 'cancel_url', 'redirect_url', 'webhook_url',
+            'status', 'paid_at', 'expires_at', 'checkout_url', 'payment_link_url',
+            'appearance_config', 'metadata', 'created_at', 'updated_at',
         ]
-        read_only_fields = ['order_id', 'status', 'paid_at', 'selcom_order_id', 'selcom_transid']
+        read_only_fields = ['order_id', 'short_code', 'status', 'paid_at', 'selcom_order_id', 'selcom_transid']
 
     def get_checkout_url(self, obj):
         return obj.checkout_url
 
+    def get_payment_link_url(self, obj):
+        return obj.payment_link_url
+
 
 class CreateCheckoutSerializer(serializers.Serializer):
-    amount = serializers.DecimalField(max_digits=12, decimal_places=2)
+    amount = serializers.DecimalField(max_digits=12, decimal_places=2, required=False)
     currency = serializers.CharField(max_length=10, default='TZS')
     description = serializers.CharField(max_length=500, required=False, allow_blank=True)
     customer_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
@@ -121,9 +128,27 @@ class CreateCheckoutSerializer(serializers.Serializer):
         child=serializers.CharField(),
         default=['MOBILE_MONEY', 'CARD', 'BANK']
     )
+    allowed_methods = serializers.ListField(
+        child=serializers.CharField(),
+        required=False,
+        default=['mobile_money']
+    )
+    allow_custom_amount = serializers.BooleanField(required=False, default=False)
+    min_amount = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, allow_null=True)
+    max_amount = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, allow_null=True)
+    profile_id = serializers.CharField(max_length=100, required=False, allow_blank=True)
     success_url = serializers.URLField(required=False, allow_blank=True)
     cancel_url = serializers.URLField(required=False, allow_blank=True)
+    redirect_url = serializers.URLField(required=False, allow_blank=True)
+    webhook_url = serializers.URLField(required=False, allow_blank=True)
+    expires_in = serializers.IntegerField(required=False, default=3600, help_text="Seconds until session expires.")
     appearance_config = serializers.JSONField(required=False, default=dict)
+    metadata = serializers.JSONField(required=False, default=dict)
+
+    def validate(self, attrs):
+        if not attrs.get('allow_custom_amount') and not attrs.get('amount'):
+            raise serializers.ValidationError({"amount": "This field is required unless allow_custom_amount is true."})
+        return attrs
 
 
 class ApiLogSerializer(serializers.ModelSerializer):

@@ -16,8 +16,13 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from rest_framework.routers import DefaultRouter
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 from .views import api_home
+from apps.developer.views import CheckoutSessionViewSet
+
+sessions_router = DefaultRouter()
+sessions_router.register(r'sessions', CheckoutSessionViewSet, basename='sessions')
 
 urlpatterns = [
     path('', api_home, name='api-home'),
@@ -35,6 +40,8 @@ urlpatterns = [
         path('imt/', include('apps.selcom.urls')),
         path('developer/', include('apps.developer.urls')),
         path('admin-panel/', include('apps.organization.urls')),
+        # Checkout Sessions & Payment Links API
+        path('', include(sessions_router.urls)),
     ])),
 
     # Documentation

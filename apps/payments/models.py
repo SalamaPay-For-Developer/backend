@@ -38,7 +38,7 @@ class Transaction(BaseModel):
     reference = models.CharField(max_length=50, unique=True)
     business = models.ForeignKey('accounts.Business', on_delete=models.PROTECT, related_name='transactions', null=True, blank=True)
     customer = models.ForeignKey('accounts.User', on_delete=models.PROTECT, null=True, blank=True, related_name='transactions')
-    category = models.ForeignKey(PaymentCategory, on_delete=models.PROTECT)
+    category = models.ForeignKey(PaymentCategory, on_delete=models.PROTECT, null=True, blank=True)
     type = models.CharField(max_length=20, choices=Type.choices)
     amount = models.DecimalField(max_digits=14, decimal_places=2)
     currency = models.CharField(max_length=3, default='TZS')
@@ -55,6 +55,15 @@ class Transaction(BaseModel):
     failure_reason = models.TextField(blank=True, null=True)
     metadata = models.JSONField(default=dict, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
+
+    # Payout (disbursement) specific fields
+    recipient_name = models.CharField(max_length=255, blank=True, null=True)
+    recipient_phone = models.CharField(max_length=15, blank=True, null=True)
+    recipient_bank = models.CharField(max_length=20, blank=True, null=True)
+    recipient_account = models.CharField(max_length=50, blank=True, null=True)
+    narration = models.CharField(max_length=500, blank=True, null=True)
+    fee_amount = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    webhook_url = models.URLField(max_length=500, blank=True, null=True)
 
     def __str__(self):
         return f"{self.reference} - {self.amount} {self.currency} ({self.status})"

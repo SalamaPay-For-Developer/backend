@@ -181,7 +181,17 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'],
+    'EXCEPTION_HANDLER': 'apps.core.responses.envelope_exception_handler',
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.ScopedRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'api_v1': '60/min',
+    },
 }
+
+# API version exposed in response envelopes
+SALAMAPAY_API_VERSION = '2026-01-25'
 
 # SimpleJWT settings
 SIMPLE_JWT = {

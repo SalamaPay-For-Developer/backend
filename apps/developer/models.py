@@ -195,15 +195,18 @@ class WebhookDelivery(BaseModel):
 class CheckoutSession(BaseModel):
     class Status(models.TextChoices):
         PENDING = 'PENDING', 'Pending'
+        ACTIVE = 'ACTIVE', 'Active'
         PROCESSING = 'PROCESSING', 'Processing'
         SUCCESS = 'SUCCESS', 'Success'
+        COMPLETED = 'COMPLETED', 'Completed'
         FAILED = 'FAILED', 'Failed'
         EXPIRED = 'EXPIRED', 'Expired'
         CANCELLED = 'CANCELLED', 'Cancelled'
 
     workspace = models.ForeignKey(DeveloperWorkspace, on_delete=models.CASCADE, related_name='checkout_sessions')
     order_id = models.CharField(max_length=100, unique=True)
-    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    short_code = models.CharField(max_length=12, unique=True, blank=True, null=True)
+    amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     currency = models.CharField(max_length=10, default='TZS')
     description = models.TextField(blank=True, null=True)
 
@@ -214,14 +217,26 @@ class CheckoutSession(BaseModel):
 
     # Payment methods enabled
     payment_methods = models.JSONField(default=list)
+    allowed_methods = models.JSONField(default=list, blank=True)
+
+    # Custom / donation amounts
+    allow_custom_amount = models.BooleanField(default=False)
+    min_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    max_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+
+    # Profile / branding
+    profile_id = models.CharField(max_length=100, blank=True, null=True)
 
     # URLs
     success_url = models.URLField(max_length=500, blank=True, null=True)
     cancel_url = models.URLField(max_length=500, blank=True, null=True)
+    redirect_url = models.URLField(max_length=500, blank=True, null=True)
+    webhook_url = models.URLField(max_length=500, blank=True, null=True)
 
     # Status
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
     paid_at = models.DateTimeField(null=True, blank=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
     expired_at = models.DateTimeField(null=True, blank=True)
 
     # Selcom
@@ -230,10 +245,17 @@ class CheckoutSession(BaseModel):
 
     # Customization
     appearance_config = models.JSONField(default=dict, blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
 
     @property
     def checkout_url(self):
-        return f"https://pay.salamapay.co/checkout/{self.order_id}"
+        return f"https://pay.lipasalama.co.tz/checkout/{self.order_id}"
+
+    @property
+    def payment_link_url(self):
+        if not self.short_code:
+            return None
+        return f"https://lipasalama.co.tz/p/{self.short_code}"
 
     def __str__(self):
         return f"Checkout {self.order_id} - {self.amount} {self.currency}"
