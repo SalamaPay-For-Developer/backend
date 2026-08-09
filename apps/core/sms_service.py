@@ -5,23 +5,35 @@ from .models import SMSLog
 
 logger = logging.getLogger(__name__)
 
-SMS_API_BASE = "https://messaging-service.co.tz/api/v2"
-SMS_SEND_URL = f"{SMS_API_BASE}/text/single"
-SMS_LOGS_URL = f"{SMS_API_BASE}/logs"
-SMS_BALANCE_URL = f"{SMS_API_BASE}/balance"
+# V1 API for sending SMS (uses Basic Auth)
+SMS_SEND_URL = "https://messaging-service.co.tz/api/sms/v1/text/single"
+
+# V2 API for balance and logs (uses Bearer Token)
+SMS_V2_BASE = "https://messaging-service.co.tz/api/v2"
+SMS_LOGS_URL = f"{SMS_V2_BASE}/logs"
+SMS_BALANCE_URL = f"{SMS_V2_BASE}/balance"
 
 
 class SMSService:
     """
-    SMS service using messaging-service.co.tz V2 API.
-    Uses Bearer Token authentication.
+    SMS service using messaging-service.co.tz.
+    - Sending SMS: V1 API with Basic Auth
+    - Balance/Logs: V2 API with Bearer Token
     """
 
     def __init__(self):
+        self.basic_auth = getattr(settings, 'SMS_BASIC_AUTH', 'Basic ZWxhbmJyYW5kczpFbGl5YWFtb3MxQA==')
         self.bearer_token = getattr(settings, 'SMS_BEARER_TOKEN', '947e205d5e067b669f3a9caa0087277f')
-        self.sender_id = getattr(settings, 'SMS_SENDER_ID', 'MIRAVIL SDC')
+        self.sender_id = getattr(settings, 'SMS_SENDER_ID', 'Elan Brands')
 
-    def _get_headers(self):
+    def _get_v1_headers(self):
+        return {
+            "Authorization": self.basic_auth,
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        }
+
+    def _get_v2_headers(self):
         return {
             "Authorization": f"Bearer {self.bearer_token}",
             "Content-Type": "application/json",
@@ -39,7 +51,7 @@ class SMSService:
 
     def send_sms(self, phone, text):
         """
-        Send SMS to a single phone number.
+        Send SMS to a single phone number using V1 API.
         Returns (success: bool, response: dict)
         """
         normalized_phone = self._normalize_phone(phone)
@@ -61,7 +73,7 @@ class SMSService:
                 response = client.post(
                     SMS_SEND_URL,
                     json=payload,
-                    headers=self._get_headers()
+                    headers=self._get_v1_headers()
                 )
 
             res_data = response.json()
@@ -71,7 +83,7 @@ class SMSService:
             except (KeyError, IndexError, TypeError):
                 group_name = 'UNKNOWN'
 
-            if group_name in ("PENDING", "ACCEPTED"):
+            if group_name in ("PENDING", "ACCEPTED", "PENDING_ENROUTE"):
                 log.status = 'SENT'
                 log.response = str(res_data)
                 log.save()
@@ -100,14 +112,14 @@ class SMSService:
 
     def get_balance(self):
         """
-        Get SMS balance.
+        Get SMS balance using V2 API.
         Returns dict with balance info.
         """
         try:
             with httpx.Client(timeout=15) as client:
                 response = client.get(
                     SMS_BALANCE_URL,
-                    headers=self._get_headers()
+                    headers=self._get_v2_headers()
                 )
             return response.json()
         except Exception as e:
@@ -116,7 +128,7 @@ class SMSService:
 
     def get_logs(self, phone=None, limit=50, sent_since=None, sent_until=None):
         """
-        Get SMS logs with optional filters.
+        Get SMS logs using V2 API with optional filters.
         Returns dict with results.
         """
         try:
@@ -132,7 +144,7 @@ class SMSService:
                 response = client.get(
                     SMS_LOGS_URL,
                     params=params,
-                    headers=self._get_headers()
+                    headers=self._get_v2_headers()
                 )
             return response.json()
         except Exception as e:
