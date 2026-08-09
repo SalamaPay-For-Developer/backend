@@ -13,7 +13,7 @@ from .serializers import (
     UserSerializer, BusinessSerializer, BusinessMemberSerializer,
     BusinessKYCSerializer, KYCDocumentSerializer
 )
-from apps.core.sms_service import send_otp_sms, send_password_reset_sms
+from apps.core.sms_service import send_otp_sms, send_password_reset_sms, sms_service
 from apps.core.email_service import send_welcome_email, send_otp_email, send_password_reset_email
 
 
@@ -145,6 +145,27 @@ class PasswordResetConfirmView(APIView):
         return Response({"detail": "Password reset successfully."})
 
 
+class TestSMSView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        phone = request.data.get('phone')
+        message = request.data.get('message', 'SalamaPay test SMS')
+
+        if not phone:
+            return Response(
+                {"detail": "Phone number is required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        success, res_data = sms_service.send_sms(phone, message)
+        return Response({
+            "success": success,
+            "phone": phone,
+            "response": res_data
+        })
+
+
 class ResendOTPView(APIView):
     permission_classes = [permissions.AllowAny]
 
@@ -174,17 +195,27 @@ class ResendOTPView(APIView):
         otp_code = generate_otp_code()
         user.otp_code = otp_code
         user.save(update_fields=['otp_code'])
+        sms_ok = False
+        email_ok = False
         try:
-            send_otp_sms(phone_number, otp_code)
-        except Exception:
-            pass
+            sms_ok, _ = send_otp_sms(phone_number, otp_code)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Resend OTP SMS error: {e}")
         if user.email:
             try:
-                send_otp_email(user.email, otp_code, user.full_name)
-            except Exception:
-                pass
+                email_ok = send_otp_email(user.email, otp_code, user.full_name)
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).error(f"Resend OTP email error: {e}")
 
-        return Response({"detail": "OTP code sent successfully."})
+        if sms_ok or email_ok:
+            return Response({"detail": "OTP code sent successfully."})
+        else:
+            return Response(
+                {"detail": "Failed to send OTP. Please try again or contact support."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -212,10 +243,16 @@ class UserViewSet(viewsets.ModelViewSet):
                     user.save(update_fields=['otp_code'])
                 except User.DoesNotExist:
                     pass
+                sms_ok = False
                 try:
-                    send_otp_sms(phone_number, otp_code)
-                except Exception:
-                    pass
+                    sms_ok, _ = send_otp_sms(phone_number, otp_code)
+                except Exception as e:
+                    import logging
+                    logging.getLogger(__name__).error(f"Registration OTP SMS error: {e}")
+                if not sms_ok:
+                    response.data['sms_sent'] = False
+                else:
+                    response.data['sms_sent'] = True
                 if email:
                     try:
                         send_welcome_email(email, full_name, phone_number)
