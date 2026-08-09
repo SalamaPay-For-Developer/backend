@@ -218,10 +218,9 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
 
-# SMS Settings (messaging-service.co.tz)
-SMS_AUTH_TOKEN = env('SMS_AUTH_TOKEN', default='Basic ZWxhbmJyYW5kczpFbGl5YWFtb3MxQA==')
-SMS_SENDER_ID = env('SMS_SENDER_ID', default='Elan Brands')
-SMS_BASE_URL = env('SMS_BASE_URL', default='https://messaging-service.co.tz/api/sms/v1/text/single')
+# SMS Settings (messaging-service.co.tz V2 API)
+SMS_BEARER_TOKEN = env('SMS_BEARER_TOKEN', default='947e205d5e067b669f3a9caa0087277f')
+SMS_SENDER_ID = env('SMS_SENDER_ID', default='MIRAVIL SDC')
 
 # Email Settings
 EMAIL_BACKEND = env('EMAIL_BACKEND', default='django.core.mail.backends.smtp.EmailBackend')
